@@ -196,7 +196,7 @@ def ReadFileVolume(fname, header):
     gipl_file.close()
     volume_np = numpy.asarray(header.volume)
     volume_np_reshaped = volume_np.reshape(header.sizes[0], header.sizes[1], header.sizes[2])
-    header.volume = volume_np_reshaped.tolist()
+    header.volume = volume_np_reshaped
 
 def WriteHDF(header):
 
@@ -207,21 +207,22 @@ def WriteHDF(header):
         dset = hdf5_file.create_dataset("dataset"+str(n), (header[n].sizes[0], header[n].sizes[1],  header[n].sizes[2]), data=header[n].volume)
     hdf5_file.close()
     
-try:
-    fname = str(sys.argv[1])
-except:
-    print("Please pass a filename command line argument")
-    sys.exit(1)
+if __name__ == '__main__':
+    try:
+        fname = str(sys.argv[1])
+    except:
+        print("Please pass a filename command line argument")
+        sys.exit(1)
 
-num_files = len(sys.argv)
-header = []
+    num_files = len(sys.argv)
+    header = []
 
-for i in range(1, num_files):
-    fname = str(sys.argv[i])
-    header.append(GIPLFile())
-    ReadFileHeader(fname, header[i-1])
-    ReadFileVolume(fname, header[i-1])
+    for i in range(1, num_files):
+        fname = str(sys.argv[i])
+        header.append(GIPLFile())
+        ReadFileHeader(fname, header[i-1])
+        ReadFileVolume(fname, header[i-1])
 
-WriteHDF(header)
-print("HDF5 file written. Bye!")
+    WriteHDF(header)
+    print("HDF5 file written. Bye!")
 

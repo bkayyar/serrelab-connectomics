@@ -1,0 +1,3 @@
+#Ignore h5 files#
+*.h5
+*.hdf5
