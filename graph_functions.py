@@ -268,5 +268,61 @@ def mergeregions(seg, rg, counts, thresholds, dust_size=0):
     print("Done with updating the region graph, size: ", str(len(new_rg)))
     return new_rg
 
+"""
+compute maximal spanning tree from weighted graph
+
+Inputs:
+* `rg`: region graph as list of edges, array of (weight,id1,id2)
+  tuples.  The edges should be presorted so that weights are in
+  descending order.
+* `max_segid`: largest ID in region graph
+
+Returns:
+* `regiontree`: *maximal* spanning tree (MST) of region graph as list of edges, array of `(weight,id1,id2)` tuples. The vertices in each edge are ordered so that `id2` is unique across edges. In other words, id1 and id2 correspond to parent and child in the tree. The code places the root of the tree at segid=1
+"""
+def mst(rg, max_segid):
+    regiontree = []
+    adjacency=[[]] * max_segid    # adjacency list
+
+    # Kruskal's algorithm
+    sets = DisjointSets(max_segid)
+    for e in rg:
+        (v1,v2) = e[1:]
+        s1 = sets.find(v1)
+        s2 = sets.find(v2)
+        if s1 != s2:
+            regiontree.append(e)
+            sets.union(s1, s2)
+            adjacency[v1].append(v2)   # only necessary for ordering
+            adjacency[v2].append(v1)
+
+    # rest of code only necessary for ordering the vertex pairs in each edge
+    # bfs (level order) tree traversal, i.e., topological sort
+    order = [0] * max_segid   # will contain numbering of vertices
+    curr = 1
+    for i in range(max_segid):
+        if order[i] == 0:
+            bfs = Deque{Int}()
+            bfs.append(i)
+            order[i] = curr
+            curr += 1
+
+            while length(bfs)>0:
+                x = front(bfs)
+                shift!(bfs)
+
+                for y in adjacency[x]:
+                    if order[y] == 0:
+                        order[y] = curr
+                        curr += 1
+                        bfs.append(y)
+
+    # order all edges as (weight, parent, child)
+    for i in range(len(regiontree)):
+        e = regiontree[i]
+        if order[e[2]] > order[e[1]]:
+            regiontree[i] = (e[0], e[2], e[1])
+    return regiontree
+
 
 
