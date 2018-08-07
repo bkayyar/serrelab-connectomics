@@ -1,4 +1,5 @@
 import numpy
+import disjoint-sets
 
 """ 
 This is a transliteration of the code from files in Seung's Watershed.jl/src/. 
@@ -198,5 +199,74 @@ def findbasins(sag):
 
     seg = numpy.reshape(flat_sag, (xdim, ydim, zdim), 'F')
     return seg, counts, counts0
+
+"""
+merge small regions by agglomerative clustering
+
+    new_rg = mergeregions(seg, rg, counts, thresholds, dust_size = 0)
+
+Inputs:
+* `seg` - segmentation.  IDs of foreground regions are 1:length(counts).  ID=0 for background.  This is modified in place by the clustering.
+* `rg`: region graph as list of edges, array of (weight,id1,id2) tuples. The edges should be presorted so that weights are in descending order. Region IDs should be consistent with those in `seg`, except no zeros.
+* `counts`: sizes of regions in `seg` (modified in place)
+* `thresholds`: sequence of (size_th,weight_th) pairs to be used for merging
+* `dust_size`: after merging, tiny regions less than dust_size to be eliminated by changing them to background voxels
+
+Returns:
+* `new_rg`: new region graph after clustering, same format as `rg`.
+
+Agglomerative clustering proceeds by considering the edges of the region graph in sequence.  If either region has size less than `size_th`, then merge the regions. When the weight of the edge in the region graph is less than or equal to `weight_th`, agglomeration proceeds to the next `(size_th,weight_th)` in `thresholds` or terminates if there is none.
+"""
+def mergeregions(seg, rg, counts, thresholds, dust_size=0):
+    counts_len = len(counts)
+    sets = DisjointSets(counts_len) #Using DisjointSets object from third-party code. Must check TODO
+    for (size_th, weight_th) in thresholds:
+        for (weight, id1, id2) in rg:
+            s1 = sets.find(id1)
+            s2 = sets.find(id2)
+            if (weight > weight_th) and (s1 != s2):
+                if (counts[s1] < size_th) or (counts[s2] < size_th):
+                    counts[s1] += counts[s2]
+                    counts[s2] = 0
+                    sets.union(s1, s2)
+                    s = sets.find(s1)   # this is either s1 or s2
+                    (counts[s], counts[s1]) = (counts[s1], counts[s]) #Is this just swapping elements?
+    print("Done merging")
+
+    # define mapping from parents to new segment IDs
+    # and apply to redefine counts
+    remaps = numpy.zeros(counts_len)     
+    next_id = 1 
+    for idx in range(counts_len):
+        s = sets.find(idx)
+        if (remaps[s] == 0) and (counts[s] >= dust_size): 
+            remaps[s] = next_id
+            counts[next_id] = counts[s]    
+            next_id += 1 
+    counts = counts[:next_id-1] #TODO ensure this is the same as resize!()
+
+    # apply remapping to voxels in seg
+    # note that dust regions will get assigned to background
+    flat_seg = numpy.ravel(seg, 'F')
+    for idx in range(len(flat_seg)):
+        if flat_seg[idx] != 0:    # only foreground voxels
+            flat_seg[idx] = remaps[sets.find(flat_seg[idx])]
+    seg = numpy.reshape(flat_seg, seg.shape(), 'F')
+    print("Done with remapping, total: ", str(next_id-1), " regions")
+
+    # apply remapping to region graph
+    in_rg = [[0]] * (next_id-1)
+    new_rg = []
+    for (weight, id1, id2) in rg:
+        s1 = remaps[sets.find(id1)]
+        s2 = remaps[sets.find(id2)]
+        if (s1 != s2) and (s1 != 0) and (s2 != 0):  # ignore dust regions
+            (s1,s2) = (min(s1,s2), max(s1, s2))
+            if s2 not in in_rg[s1]:
+                new_rg.append((weight, s1, s2))
+                in_rg[s1].append(s2)
+    print("Done with updating the region graph, size: ", str(len(new_rg)))
+    return new_rg
+
 
 
