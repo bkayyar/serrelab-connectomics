@@ -1,4 +1,5 @@
 import numpy
+import collections
 import disjoint-sets
 
 """ 
@@ -302,14 +303,13 @@ def mst(rg, max_segid):
     curr = 1
     for i in range(max_segid):
         if order[i] == 0:
-            bfs = Deque{Int}()
-            bfs.append(i)
+            bfs = collections.deque()
+            bfs.append(i) #TODO check Python deque semantics. Append right, popleft() later?
             order[i] = curr
             curr += 1
 
             while length(bfs)>0:
-                x = front(bfs)
-                shift!(bfs)
+                x = bfs.popleft()
 
                 for y in adjacency[x]:
                     if order[y] == 0:
@@ -325,4 +325,65 @@ def mst(rg, max_segid):
     return regiontree
 
 
+"""
+create region graph by finding maximum affinity between each pair of regions in segmentation
+
+Inputs:
+* `aff`: affinity graph (undirected and weighted). 4D array of affinities, where last dimension is of size 3
+* `seg`: segmentation.  Each element of the 3D array contains a *segment ID*, a nonnegative integer ranging from 0 to `max_segid`
+* `max_segid`: number of segments
+
+Returns:
+* `rg`: region graph as list of edges, array of (weight,id1,id2) tuples. The edges are sorted so that weights are in descending order.
+
+The vertices of the region graph are regions in the segmentation.  An
+edge of the region graph corresponds to a pair of regions in the
+segmentation that are connected by an edge in the affinity graph.  The
+weight of an edge in the region graph is the maximum weight of the
+edges in the affinity graph connecting the two regions.
+
+The region graph includes every edge between a region and itself.
+The weight of a self-edge is the maximum affinity within the region.
+
+Background voxels (those with ID=0) are ignored.
+"""
+def regiongraph(aff, seg, max_segid):
+    (xdim,ydim,zdim)=size(seg)
+    assert aff.shape() == (xdim,ydim,zdim,3)
+
+    low = 0.0  # choose a value lower than any affinity in the region graph
+    ZERO_SEG = 0
+
+    # edge list representation
+    edges = {}
+    # keys are vertex pairs (i,j) where i <= j
+    # values are edge weights
+
+    for z in range(zdim):
+        for y in range(ydim):
+            for x in range(xdim):
+                if seg[x,y,z] != ZERO_SEG:   # ignore background voxels
+                    if (x > 1) and seg[x-1,y,z] != ZERO_SEG and seg[x,y,z] != seg[x-1,y,z]:
+                        p = (min(seg[x,y,z], seg[x-1,y,z]), max(seg[x,y,z], seg[x-1,y,z])) 
+                        edges[p] = max(edges[p], aff[x,y,z,0])
+                    end
+                    if (y > 1) and seg[x,y-1,z] != ZERO_SEG and seg[x,y,z] != seg[x,y-1,z]:
+                        p = (min(seg[x,y,z], seg[x,y-1,z]), max(seg[x,y,z], seg[x,y-1,z]))
+                        edges[p] = max(edges[p], aff[x,y,z,1])
+                    end
+                    if (z > 1) and seg[x,y,z-1] != ZERO_SEG and seg[x,y,z] != seg[x,y,z-1]:
+                        p = (min(seg[x,y,z], seg[x,y,z-1]), max(seg[x,y,z], seg[x,y,z-1]))
+                        edges[p] = max(edges[p], aff[x,y,z,2])
+
+    # separate weights and vertices in two arrays
+    nedges = len(edges)
+    println("Region graph size: ", nedges)
+    # repackage in array of typles
+    rg = numpy.zeros(nedges, dtype='uint32, uint32, float32') 
+    i = 0
+    for (k,v) in edges:
+        i += 1
+        rg[i]= (v, k[0], k[1])
+    rg.sort(kind='mergesort') #TODO: Make sure this still sorts using the right key. Also why mergesort?
+    return rg
 
