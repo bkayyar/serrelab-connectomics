@@ -97,8 +97,8 @@ def write_volume(volume, out_file):
     gipl_file = open(out_file, 'wb')
     gipl_file.seek(HEADER_SIZE, 0) #Seek to end of header
     #Reinterpret the volume as made of big-endian int32 (necessary for GIPL). 
-    #'F' specifies Fortran-style array layout order and 'equiv' allows only byte-order changes in the conversion
-    volume.astype('>i4', order='F', casting='equiv').tofile(gipl_file) 
+    #'F' specifies Fortran-style array layout order and 'unsafe' reminds you that all types of data conversion are allowed
+    volume.astype('>i4', order='F', casting='unsafe').tofile(gipl_file) 
     gipl_file.close()
     
 if __name__ == '__main__':
