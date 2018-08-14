@@ -29,10 +29,6 @@ class GIPLFile:
     magic_number = 0
     volume = []
 
-def GetDataSize(sizes, voxelbits):
-    return(reduce(mul, sizes)*(voxelbits/8))
-    
-
 def ReadFileHeader(fname, header):
     OFFSET = 256
     MAGIC_NUMBER = 4026526128
@@ -64,7 +60,7 @@ def ReadFileHeader(fname, header):
         maxdim = 3 
     else:
         maxdim = 4
-    header.sizes = header.sizes[:maxdim]
+    #header.sizes = header.sizes[:maxdim]
 
     #Image type header file
     image_type_byte = gipl_file.read(2)
@@ -188,16 +184,15 @@ def ReadFileVolume(fname, header):
         voxelbits = 64
         format_string += "d"
 
-    datasize = GetDataSize(header.sizes, voxelbits)
-    gipl_file.seek(header.filesize - datasize, 0)
+    gipl_file.seek(256, 0)
     volume_bytes = gipl_file.read(voxelbits/8)
     while(volume_bytes != ""):
         header.volume.append(struct.unpack(format_string, volume_bytes)[0])
         volume_bytes = gipl_file.read(voxelbits/8)
     gipl_file.close()
-    volume_np = numpy.asarray(header.volume)
-    volume_np_reshaped = volume_np.reshape(header.sizes[0], header.sizes[1], header.sizes[2])
-    header.volume = volume_np_reshaped
+    #volume_np = numpy.asarray(header.volume)
+    #volume_np_reshaped = volume_np.reshape(header.sizes[0], header.sizes[1], header.sizes[2])
+    #header.volume = volume_np_reshaped
 
 def WriteHDF(header):
 

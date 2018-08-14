@@ -1,6 +1,7 @@
 """ Script to convert npy file to GIPL file
+Takes in two arguments: <path_to_input_npy_file> <path_to_output_gipl_file>
 
-Assumptions: Data stored in npy file as float
+Assumptions: Data stored in npy file as int32
 
 """
 import sys
@@ -54,8 +55,8 @@ def write_metadata(volume, out_file):
     for j in range(4):
         gipl_file.write(struct.pack(">H", header.sizes[j]))
 
-    #Image type is float TODO check this 
-    header.image_type = 64
+    #Image type is int32  TODO check this 
+    header.image_type = 32
     gipl_file.write(struct.pack(">H", header.image_type))
 
     #Scales was [2.0, 2.0, 2.0] in Berson's files. TODO find out what this does
@@ -88,6 +89,17 @@ def write_metadata(volume, out_file):
     gipl_file.write(struct.pack(">f", header.interslice_offset))
     gipl_file.write(struct.pack(">f", header.user_def2))
     gipl_file.write(struct.pack(">I", header.magic_number))
+
+    gipl_file.close()
+    return header
+    
+def write_volume(volume, out_file):
+    gipl_file = open(out_file, 'wb')
+    gipl_file.seek(HEADER_SIZE, 0) #Seek to end of header
+    #Reinterpret the volume as made of big-endian int32 (necessary for GIPL). 
+    #'F' specifies Fortran-style array layout order and 'equiv' allows only byte-order changes in the conversion
+    volume.astype('>i4', order='F', casting='equiv').tofile(gipl_file) 
+    gipl_file.close()
     
 if __name__ == '__main__':
     if len(sys.argv) < 3:
@@ -98,3 +110,27 @@ if __name__ == '__main__':
     volume = numpy.load(in_file)
     out_file = sys.argv[2]
     header = write_metadata(volume, out_file)
+
+    print("=====================================")
+    print("output filename : " + out_file)
+    print("filesize : " + str(header.filesize))
+    print("sizes : " + str(header.sizes)[:])
+    print("image_type : " + str(header.image_type) + '-' + trans_type[header.image_type])
+    print("Scales : " + str(header.scales)[:])
+    print("patient : " + header.patient)
+    print("matrix : " + str(header.matrix)[:])
+    print("orientation : " + str(header.orientation) + '-' + trans_orien[header.orientation+1])
+    print("voxel_min : " + str(header.voxmin))
+    print("voxel_max : " + str(header.voxmax))
+    print("origin : " + str(header.origin)[:])
+    print("pixval_offset : " + str(header.pixval_offset))
+    print("pixval_cal : " + str(header.pixval_cal))
+    print("interslice gap : " + str(header.interslice))
+    print("user_def2 : " + str(header.user_def2))
+    print("par2 : " + str(header.par2))
+    print("Header size (offset): " + str(OFFSET))
+    print("=====================================")
+
+    write_volume(volume, out_file)
+    print("File written successfully!")
+
