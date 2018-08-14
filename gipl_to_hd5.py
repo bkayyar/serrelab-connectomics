@@ -135,6 +135,7 @@ def ReadFileHeader(fname, header):
     print("filesize : " + str(header.filesize))
     print("sizes : " + str(header.sizes)[:])
     print("image_type : " + str(header.image_type) + '-' + trans_type[header.image_type])
+    print("Scales : " + str(header.scales)[:])
     print("patient : " + header.patient)
     print("matrix : " + str(header.matrix)[:])
     print("orientation : " + str(header.orientation) + '-' + trans_orien[header.orientation+1])
