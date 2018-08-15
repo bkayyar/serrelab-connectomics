@@ -1,18 +1,18 @@
 """ Script to convert npy file to GIPL file
 Takes in two arguments: <path_to_input_npy_file> <path_to_output_gipl_file>
-
-Assumptions: Data stored in npy file as int32
-
 """
+
 import sys
 import numpy
+import struct
 
+PIXEL_TYPE = 31 #Assuming data stored as uint32
 HEADER_SIZE = 256 #The header is 256 bytes
 MAGIC_NUMBER = 4026526128 #A predefined magic number for GIPL files
 
 class GIPLHeader:
     filesize = 0
-    sizes = [0.0, 0.0, 0.0, 0.0]
+    sizes = [0, 0, 0, 0]
     image_type = 0
     scales = [1.0, 1.0, 1.0, 1.0]
     patient = ""
@@ -29,14 +29,16 @@ class GIPLHeader:
     magic_number = MAGIC_NUMBER
     volume = []
 
-def write_metadata(volume, out_file):
+def write_file(volume, out_file):
     header = GIPLHeader()
+    print("Opening file...")
     gipl_file = open(out_file, 'wb')
     maxdim = 3
 
+    print("Calculating header fields...")
     #Filesize field
     volume_length = numpy.ma.size(volume) #This returns the total number of elements in the volume
-    data_type = volume.dtype
+    data_type = numpy.dtype('i4')
     volume_size = data_type.itemsize*volume_length #Number of elements * size of each element
     header.filesize = volume_size + HEADER_SIZE
 
@@ -47,7 +49,7 @@ def write_metadata(volume, out_file):
         maxdim = 3
         for i in range(3):
             header.sizes[i] = shape[i]
-        header.sizes[3] = 1.0
+        header.sizes[3] = 1
     else:
         maxdim = 4
         for i in range(4):
@@ -56,7 +58,7 @@ def write_metadata(volume, out_file):
         gipl_file.write(struct.pack(">H", header.sizes[j]))
 
     #Image type is int32  TODO check this 
-    header.image_type = 32
+    header.image_type = PIXEL_TYPE
     gipl_file.write(struct.pack(">H", header.image_type))
 
     #Scales was [2.0, 2.0, 2.0] in Berson's files. TODO find out what this does
@@ -83,25 +85,32 @@ def write_metadata(volume, out_file):
     for i in range(4):
         gipl_file.write(struct.pack(">d", header.origin[i]))
     
-    
     gipl_file.write(struct.pack(">f", header.pixval_offset))
     gipl_file.write(struct.pack(">f", header.pixval_cal))
-    gipl_file.write(struct.pack(">f", header.interslice_offset))
+    gipl_file.write(struct.pack(">f", header.interslicegap))
     gipl_file.write(struct.pack(">f", header.user_def2))
     gipl_file.write(struct.pack(">I", header.magic_number))
 
-    gipl_file.close()
-    return header
-    
-def write_volume(volume, out_file):
-    gipl_file = open(out_file, 'wb')
+    print("Writing volume...")
     gipl_file.seek(HEADER_SIZE, 0) #Seek to end of header
     #Reinterpret the volume as made of big-endian int32 (necessary for GIPL). 
     #'F' specifies Fortran-style array layout order and 'unsafe' reminds you that all types of data conversion are allowed
     volume.astype('>i4', order='F', casting='unsafe').tofile(gipl_file) 
+
     gipl_file.close()
+    print("File written successfully!")
+    return header
     
 if __name__ == '__main__':
+
+    trans_type = {1:'binary', 7:'char', 8:'uchar', 15:'short', 16:'ushort', 31:'uint',
+    32:'int', 64:'float', 65:'double', 144:'C_short', 160:'C_int', 192:'C_float',
+    193:'C_double', 200:'surface', 201:'polygon'}
+
+    trans_orien = {0+1:'UNDEFINED', 1+1:'UNDEFINED_PROJECTION', 2+1:'APP_PROJECTION',
+    3+1:'LATERAL_PROJECTION', 4+1:'OBLIQUE_PROJECTION', 8+1:'UNDEFINED_TOMO',
+    9+1:'AXIAL', 10+1:'CORONAL', 11+1:'SAGITTAL', 12+1:'OBLIQUE_TOMO'}
+
     if len(sys.argv) < 3:
         print("Usage: python npy_to_gipl.py <in_file> <out_file>")
         sys.exit(1)
@@ -109,7 +118,7 @@ if __name__ == '__main__':
     in_file = sys.argv[1]
     volume = numpy.load(in_file)
     out_file = sys.argv[2]
-    header = write_metadata(volume, out_file)
+    header = write_file(volume, out_file)
 
     print("=====================================")
     print("output filename : " + out_file)
@@ -125,12 +134,9 @@ if __name__ == '__main__':
     print("origin : " + str(header.origin)[:])
     print("pixval_offset : " + str(header.pixval_offset))
     print("pixval_cal : " + str(header.pixval_cal))
-    print("interslice gap : " + str(header.interslice))
+    print("interslice gap : " + str(header.interslicegap))
     print("user_def2 : " + str(header.user_def2))
     print("par2 : " + str(header.par2))
-    print("Header size (offset): " + str(OFFSET))
+    print("Header size (offset): " + str(HEADER_SIZE))
     print("=====================================")
-
-    write_volume(volume, out_file)
-    print("File written successfully!")
 
