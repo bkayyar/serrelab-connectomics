@@ -1,14 +1,12 @@
 """
-This program converts image files from the GIPL file format to the HDF5 data format.
-Due to a lack of formal documentation of the GIPL file standards, the function that reads GIPL files is a Python transliteration of the Matlab function found a https://www.mathworks.com/matlabcentral/fileexchange/16407-gipl-toolbox
-Pass in a GIPL filename as the first argument. The script writes a file called "gipl_converted.hdf5".
+This program converts image files from the GIPL file format to the numpy ".npy" file format.
+Takes two command-line arguments - <path_to_input_file> <path_to_output_file>
 """
 
 import sys
 import h5py
 import numpy
 import struct
-from operator import mul
 
 HEADER_SIZE = 256
 
@@ -46,7 +44,7 @@ def ReadFileHeader(fname):
     try:
         gipl_file = open(fname, 'rb')
     except:
-        print("Error opening file - check filename maybe?")
+        print("ReadHeader: Error opening file - check filename maybe?")
         sys.exit(1)
 
     print("Reading GIPL Header...")
@@ -128,8 +126,6 @@ def ReadFileHeader(fname):
     else:
         raise RunTimeError("MAGIC NUMBER MISMATCH!! BAD FILE")
 
-    gipl_file.close()
-
     print("=====================================")
     print("filename : " + fname)
     print("filesize : " + str(header.filesize))
@@ -149,6 +145,8 @@ def ReadFileHeader(fname):
     print("par2 : " + str(header.par2))
     print("Header size (offset): " + str(OFFSET))
     print("=====================================")
+
+    gipl_file.close()
     return header
 
 def WriteVolume(header, in_file, out_file):
@@ -157,7 +155,7 @@ def WriteVolume(header, in_file, out_file):
     except:
         print("Error opening file - check filename maybe?")
         sys.exit(1)
-    
+
     format_string = ">"
 
     if (header.image_type == 1):
@@ -188,14 +186,18 @@ def WriteVolume(header, in_file, out_file):
         voxelbits = 64
         format_string += "d"
 
-    print("Reading volume...")
-    dtype = numpy.dtype(format_string)
-    gipl_file.seek(HEADER_SIZE, 0)
+    volume_size = header.sizes[0]*header.sizes[1]*header.sizes[2]*header.sizes[3]
+    gipl_file.seek(-volume_size, 2) #There may be some padding after the header, so skip to the beginning of the data
+    #dtype = numpy.dtype(format_string)
     #Try using fromfile or memmap here
-    volume = numpy.fromfile(gipl_file, dtype=dtype)
-    print("Writing npy file...")
-    numpy.save(out_file, volume)
+    print("Reading volume...")
+    volume = numpy.fromfile(gipl_file, dtype=numpy.dtype(">B"))
     gipl_file.close()
+    print("Reshaping volume...")
+    volume = numpy.reshape(volume, (header.sizes[0], header.sizes[1], header.sizes[2]), order='F')
+    print("Writing npy file " + out_file + "...")
+    numpy.save(out_file, volume)
+    return
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
