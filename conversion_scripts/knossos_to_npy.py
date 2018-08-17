@@ -1,3 +1,13 @@
+"""
+Script to convert Knossos datasets (.conf and .raw files) to Numpy npy files
+Command line arguments:
+    * Path to input Knossos dataset's knossos.conf file (usually found in the mag* directory)
+    * Path to output npy file. 
+
+WARNING: I don't think using npy_to_knossos.py and knossos_to_npy.py in conjunction will leave you with identical npy files - 
+once touched by Knossos, forever changed (Knossos uses uint8 I think). That is to say, npy1 -> knossos (.raw) -> npy2 =/=> npy1 = npy2
+if you use npy_to_knossos.py and knossos_to_npy.py
+"""
 import sys
 import numpy
 from knossos_utils import knossosdataset as knosdata
