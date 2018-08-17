@@ -1,6 +1,8 @@
 """
-This program converts image files from the GIPL file format to the numpy ".npy" file format.
-Takes two command-line arguments - <path_to_input_file> <path_to_output_file>
+Script to convert GIPL files to Numpy npy files
+Command line arguments:
+    * Path to input GIPL file 
+    * Path to output npy file. 
 """
 
 import sys
@@ -194,7 +196,7 @@ def WriteVolume(header, in_file, out_file):
     volume = numpy.fromfile(gipl_file, dtype=dtype)
     gipl_file.close()
     print("Reshaping volume...")
-    volume = numpy.reshape(volume, (header.sizes[0], header.sizes[1], header.sizes[2]), order='F')
+    volume = numpy.reshape(volume, (header.sizes[0], header.sizes[1], header.sizes[2])).T #Transpose to resolve Fortran-vs-C array semantics
     print("Writing npy file " + out_file + "...")
     numpy.save(out_file, volume)
     return

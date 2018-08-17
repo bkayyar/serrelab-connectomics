@@ -1,12 +1,19 @@
-""" Script to convert npy file to GIPL file
-Takes in two arguments: <path_to_input_npy_file> <path_to_output_gipl_file>
+"""
+Script to convert Numpy npy files to GIPL files
+Command line arguments:
+    * Path to input npy file 
+    * Path to output GIPL file. 
+
+WARNING: GIPL files are said to only support the following data types for our purposes: signed and unsigned 8-bit integers, signed and unsigned 16-bit integers,
+signed and unsigned 32-bit integers and 32-bit floats. Make sure your numpy array data type matches one of these!
 """
 
 import sys
 import numpy
 import struct
 
-PIXEL_TYPE = 31 #Assuming data stored as uint32
+PIXEL_TYPE = 0 #Data types are determined later
+DTYPE_STRING = '' 
 HEADER_SIZE = 256 #The header is 256 bytes
 MAGIC_NUMBER = 4026526128 #A predefined magic number for GIPL files
 
@@ -29,6 +36,15 @@ class GIPLHeader:
     magic_number = MAGIC_NUMBER
     volume = []
 
+def find_name(dtype):
+    name_type = {"uint8": 8, "int8": 7, "int16": 15, "uint16": 16, "uint32": 31, "int32": 32, "float32": 64}
+    name = dtype.name
+    try:
+        return name_type[name]
+    except KeyError:
+        raise RuntimeError("Bad numpy data type!")
+    
+    
 def write_file(volume, out_file):
     header = GIPLHeader()
     print("Opening file...")
@@ -38,7 +54,7 @@ def write_file(volume, out_file):
     print("Calculating header fields...")
     #Filesize field
     volume_length = numpy.ma.size(volume) #This returns the total number of elements in the volume
-    data_type = numpy.dtype('i4')
+    data_type = numpy.dtype(DTYPE_STRING)
     volume_size = data_type.itemsize*volume_length #Number of elements * size of each element
     header.filesize = volume_size + HEADER_SIZE
 
@@ -57,7 +73,7 @@ def write_file(volume, out_file):
     for j in range(4):
         gipl_file.write(struct.pack(">H", header.sizes[j]))
 
-    #Image type is int32  TODO check this 
+    #Image type is stored at the top of the file 
     header.image_type = PIXEL_TYPE
     gipl_file.write(struct.pack(">H", header.image_type))
 
@@ -93,9 +109,8 @@ def write_file(volume, out_file):
 
     print("Writing volume...")
     gipl_file.seek(HEADER_SIZE, 0) #Seek to end of header
-    #Reinterpret the volume as made of big-endian int32 (necessary for GIPL). 
-    #'F' specifies Fortran-style array layout order and 'unsafe' reminds you that all types of data conversion are allowed
-    volume.astype('>i4', order='F', casting='unsafe').tofile(gipl_file) 
+    #'unsafe' reminds you that all types of data conversion are allowed
+    volume.astype(DTYPE_STRING, casting='unsafe').tofile(gipl_file) 
 
     gipl_file.close()
     print("File written successfully!")
@@ -117,6 +132,8 @@ if __name__ == '__main__':
 
     in_file = sys.argv[1]
     volume = numpy.load(in_file)
+    DTYPE_STRING = str(volume.dtype)
+    PIXEL_TYPE = find_name(volume.dtype) 
     out_file = sys.argv[2]
     header = write_file(volume, out_file)
 
