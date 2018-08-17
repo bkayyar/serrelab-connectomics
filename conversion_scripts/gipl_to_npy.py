@@ -186,12 +186,12 @@ def WriteVolume(header, in_file, out_file):
         voxelbits = 64
         format_string += "d"
 
-    volume_size = header.sizes[0]*header.sizes[1]*header.sizes[2]*header.sizes[3]
+    #volume size = (number of elements) * (size of each element in bits) / (8 bits/byte) 
+    volume_size = header.sizes[0]*header.sizes[1]*header.sizes[2]*header.sizes[3]*(voxelbits/8)
     gipl_file.seek(-volume_size, 2) #There may be some padding after the header, so skip to the beginning of the data
-    #dtype = numpy.dtype(format_string)
-    #Try using fromfile or memmap here
+    dtype = numpy.dtype(format_string)
     print("Reading volume...")
-    volume = numpy.fromfile(gipl_file, dtype=numpy.dtype(">B"))
+    volume = numpy.fromfile(gipl_file, dtype=dtype)
     gipl_file.close()
     print("Reshaping volume...")
     volume = numpy.reshape(volume, (header.sizes[0], header.sizes[1], header.sizes[2]), order='F')
