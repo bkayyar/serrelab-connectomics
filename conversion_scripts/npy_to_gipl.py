@@ -109,8 +109,8 @@ def write_file(volume, out_file):
 
     print("Writing volume...")
     gipl_file.seek(HEADER_SIZE, 0) #Seek to end of header
-    #'unsafe' reminds you that all types of data conversion are allowed
-    volume.astype(DTYPE_STRING, casting='unsafe').tofile(gipl_file) 
+    #'unsafe' reminds you that all types of data conversion are allowed. Transpose to resolve Fortran-vs-C array semantics
+    volume.astype(DTYPE_STRING, casting='unsafe').T.tofile(gipl_file) 
 
     gipl_file.close()
     print("File written successfully!")
