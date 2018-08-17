@@ -3,3 +3,5 @@
 *.gipl
 *.h5
 *.npy
+*.conf
+*.raw
