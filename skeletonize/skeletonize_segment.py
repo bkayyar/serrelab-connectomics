@@ -32,9 +32,11 @@ def skeletonize_volume(in_file, out_file):
                             single_segment[z, y, x] = 1 #Convert to binary image
             single_segment = skeletonize_3d(single_segment)
             skeletonized = numpy.add(single_segment, skeletonized) #Merge current segment with other segments
+            #plt.imshow(single_segment[12, :, :], cmap='gray')
+            #plt.show()
     numpy.save(out_file, skeletonized)
-    plt.imshow(skeletonized[125, :, :], cmap='gray')
-    plt.show()
+    #plt.imshow(skeletonized[12, :, :], cmap='gray')
+    #plt.show()
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
