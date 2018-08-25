@@ -19,10 +19,8 @@ def skeletonize_volume(in_file, out_file):
     print("Getting segment IDs...")
     seg_ids = numpy.unique(input_segments) #Get segment IDs
     num_segs = len(seg_ids)
-    count = 0
     for idx in seg_ids:
         if idx != 0: #Skip 0 class - cell membrane
-            count += 1
             print("Skeletonizing segment ID " + str(idx) + " out of " + str(num_segs) + "...")
             chosen_seg = idx == input_segments #Get elements for the current segment
             for z in range(zdim):

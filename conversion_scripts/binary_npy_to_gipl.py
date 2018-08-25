@@ -37,7 +37,7 @@ class GIPLHeader:
     volume = []
 
 def find_name(dtype):
-    name_type = {"binary": 1, "uint8": 8, "int8": 7, "int16": 15, "uint16": 16, "uint32": 31, "int32": 32, "int64": 32, "float32": 64}
+    name_type = {"binary": 1, "uint8": 8, "int8": 7, "int16": 15, "uint16": 16, "uint32": 31, "int32": 32, "float32": 64}
     name = dtype.name
     try:
         return name_type[name]
@@ -132,8 +132,8 @@ if __name__ == '__main__':
 
     in_file = sys.argv[1]
     volume = numpy.load(in_file)
-    DTYPE_STRING = #str(volume.dtype)
-    PIXEL_TYPE = find_name(volume.dtype) 
+    DTYPE_STRING = 'bool' #str(volume.dtype)
+    PIXEL_TYPE = 1 #find_name(volume.dtype) 
     out_file = sys.argv[2]
     header = write_file(volume, out_file)
 
