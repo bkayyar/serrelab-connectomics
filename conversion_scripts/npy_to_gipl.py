@@ -132,7 +132,7 @@ if __name__ == '__main__':
 
     in_file = sys.argv[1]
     volume = numpy.load(in_file)
-    DTYPE_STRING = #str(volume.dtype)
+    DTYPE_STRING = str(volume.dtype)
     PIXEL_TYPE = find_name(volume.dtype) 
     out_file = sys.argv[2]
     header = write_file(volume, out_file)
