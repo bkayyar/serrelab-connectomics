@@ -10,6 +10,8 @@ import numpy
 import matplotlib.pyplot as plt
 from skimage.morphology import skeletonize_3d
 
+MEMBRANE_ID = 2081
+
 def skeletonize_volume(in_file, out_file):
     print("Loading segments from input file...")
     input_segments = numpy.load(in_file)
@@ -20,7 +22,7 @@ def skeletonize_volume(in_file, out_file):
     seg_ids = numpy.unique(input_segments) #Get segment IDs
     num_segs = len(seg_ids)
     for idx in seg_ids:
-        if idx != 0: #Skip 0 class - cell membrane
+        if idx != MEMBRANE_ID: #Skip cell membrane
             print("Skeletonizing segment ID " + str(idx) + " out of " + str(num_segs) + "...")
             chosen_seg = idx == input_segments #Get elements for the current segment
             for z in range(zdim):

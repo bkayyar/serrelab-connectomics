@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 from skimage.morphology import skeletonize_3d
 
 NUM_SEGS = 5 #Number of largest segments to skeletonize
+MEMBRANE_ID = 2081
 
 def skeletonize_volume(in_file, out_file):
     print("Loading segments from input file...")
@@ -29,7 +30,7 @@ def skeletonize_volume(in_file, out_file):
     descending_segs = largest_segs[numpy.argsort(-largest_segs)] #Sort in descending order to get the largest segment first
     count = 0
     for idx in descending_segs:
-        if idx != 2098: #Skip 0 class - cell membrane
+        if idx != MEMBRANE_ID: #Skip 0 class - cell membrane
             count += 1
             print("Skeletonizing segment ID " + str(idx) + ", " + str(count) + " out of " + str(NUM_SEGS) + "...")
             for z in range(zdim):
