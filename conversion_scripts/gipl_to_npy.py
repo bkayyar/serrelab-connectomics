@@ -6,7 +6,6 @@ Command line arguments:
 """
 
 import sys
-import h5py
 import numpy
 import struct
 

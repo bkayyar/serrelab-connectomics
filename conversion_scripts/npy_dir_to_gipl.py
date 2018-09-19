@@ -41,6 +41,10 @@ class GIPLHeader:
 def find_name(dtype):
     name_type = {"binary": 1, "uint8": 8, "int8": 7, "int16": 15, "uint16": 16, "uint32": 31, "int32": 32, "int64": 32, "float32": 64}
     name = dtype.name
+    if (name == 'int64'):
+        print("Warning: Loss of precision, 64-bit integer values cast to 32-bit integers")
+    tpye_string = {1: "binary", 8: "uint8", 7: "int8", 15: "int16", 16: "uint16", 31: "uint32", 32: "int32", 32: "int64", 64: "float32"}
+    DTYPE_STRING = type_string[name_type[name]]
     try:
         return name_type[name]
     except KeyError:
@@ -49,7 +53,6 @@ def find_name(dtype):
     
 def write_file(in_file, out_file):
     volume = numpy.load(in_file)
-    DTYPE_STRING = str(volume.dtype)
     PIXEL_TYPE = find_name(volume.dtype) 
     header = GIPLHeader()
     gipl_file = open(out_file, 'wb')
