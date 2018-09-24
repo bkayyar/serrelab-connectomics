@@ -10,13 +10,11 @@ signed and unsigned 32-bit integers and 32-bit floats. Make sure your numpy arra
 """
 
 import os 
-from glob2 import glob
+# from glob2 import glob
 import numpy
 import struct
 import argparse
 
-PIXEL_TYPE = 0 #Data types are determined later
-DTYPE_STRING = '' 
 HEADER_SIZE = 256 #The header is 256 bytes
 MAGIC_NUMBER = 4026526128 #A predefined magic number for GIPL files
 
@@ -38,22 +36,17 @@ class GIPLHeader:
     magic_number = MAGIC_NUMBER
     volume = []
 
-def find_name(dtype):
-    name_type = {"binary": 1, "uint8": 8, "int8": 7, "int16": 15, "uint16": 16, "uint32": 31, "int32": 32, "int64": 32, "float32": 64}
-    name = dtype.name
-    if (name == 'int64'):
-        print("Warning: Loss of precision, 64-bit integer values cast to 32-bit integers")
-    tpye_string = {1: "binary", 8: "uint8", 7: "int8", 15: "int16", 16: "uint16", 31: "uint32", 32: "int32", 32: "int64", 64: "float32"}
-    DTYPE_STRING = type_string[name_type[name]]
+def find_name(data_type):
+    name_type = {"binary": 1, "uint8": 8, "int8": 7, "int16": 15, "uint16": 16} #ITK-SNAP only supports numbers <= 16 bits
     try:
-        return name_type[name]
+        return name_type[data_type]
     except KeyError:
         raise RuntimeError("Bad numpy data type!")
     
     
-def write_file(in_file, out_file):
+def write_file(in_file, out_file, data_type):
     volume = numpy.load(in_file)
-    PIXEL_TYPE = find_name(volume.dtype) 
+    PIXEL_TYPE = find_name(data_type)
     header = GIPLHeader()
     gipl_file = open(out_file, 'wb')
     maxdim = 3
@@ -105,18 +98,18 @@ def write_file(in_file, out_file):
     gipl_file.write(struct.pack(">I", header.magic_number))
 
     gipl_file.seek(HEADER_SIZE, 0) #Seek to end of header
-    #'unsafe' reminds you that all types of data conversion are allowed. Transpose to resolve Fortran-vs-C array semantics
-    volume.astype(DTYPE_STRING, casting='unsafe').T.tofile(gipl_file) 
+    volume.astype(data_type).transpose(2,1,0).tofile(gipl_file) 
     gipl_file.close()
 
-def main(input_path, wc):
+def main(input_path, wc, data_type):
     print("Globbing files...")
-    files = glob(os.path.join(input_path, wc))
+    # files = glob(os.path.join(input_path, wc))
+    files = [input_path]
     total_len = len(files)
     count = 0
     for in_file in files:
         out_file = '.'.join(in_file.split('.')[:-1])+".gipl"
-        #write_file(in_file, out_file)
+        write_file(in_file, out_file, data_type)
         count += 1
         print "Converted  "+in_file+", %d of %d."%(count, total_len)
 
@@ -126,6 +119,8 @@ if __name__ == '__main__':
         help='Path to npy segments to be converted')
     parser.add_argument('--wc', dest='wc', type=str, default='**/**/**/*.npy',
         help='Glob2 wildcard to npy segments (** for recursive).')
+    parser.add_argument('--dt', dest='data_type',type=str, default=None,
+        help='Data type to interpret voxels')
     args = parser.parse_args()
     main(**vars(args))
 

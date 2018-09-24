@@ -11,9 +11,8 @@ signed and unsigned 32-bit integers and 32-bit floats. Make sure your numpy arra
 import sys
 import numpy
 import struct
+import skimage.segmentation
 
-PIXEL_TYPE = 0 #Data types are determined later
-DTYPE_STRING = '' 
 HEADER_SIZE = 256 #The header is 256 bytes
 MAGIC_NUMBER = 4026526128 #A predefined magic number for GIPL files
 
@@ -36,23 +35,23 @@ class GIPLHeader:
     magic_number = MAGIC_NUMBER
     volume = []
 
-def find_name(dtype):
-    name_type = {"binary": 1, "uint8": 8, "int8": 7, "int16": 15, "uint16": 16, "uint32": 31, "int32": 32, "int64": 32, "float32": 64}
-    name = dtype.name
+def find_name(dtype_string):
+    name_type = {"binary": 1, "uint8": 8, "int8": 7, "int16": 15, "uint16": 16} #ITK-SNAP only accepts numbers <= 16 bits
     try:
-        return name_type[name]
+        return name_type[dtype_string]
     except KeyError:
         raise RuntimeError("Bad numpy data type!")
     
     
 def write_file(volume, out_file):
     header = GIPLHeader()
-    print("Opening file...")
     gipl_file = open(out_file, 'wb')
     maxdim = 3
 
     print("Calculating header fields...")
     #Filesize field
+    DTYPE_STRING = "uint8"
+    PIXEL_TYPE = find_name(DTYPE_STRING) 
     volume_length = numpy.ma.size(volume) #This returns the total number of elements in the volume
     data_type = numpy.dtype(DTYPE_STRING)
     volume_size = data_type.itemsize*volume_length #Number of elements * size of each element
@@ -107,10 +106,14 @@ def write_file(volume, out_file):
     gipl_file.write(struct.pack(">f", header.user_def2))
     gipl_file.write(struct.pack(">I", header.magic_number))
 
-    print("Writing volume...")
     gipl_file.seek(HEADER_SIZE, 0) #Seek to end of header
     #'unsafe' reminds you that all types of data conversion are allowed. Transpose to resolve Fortran-vs-C array semantics
-    volume.astype(DTYPE_STRING, casting='unsafe').T.tofile(gipl_file) 
+    #volume_byteorder = volume.newbyteorder(">")
+    print("Remapping labels...")
+    volume_remapped, fw, iw = skimage.segmentation.relabel_sequential(volume)
+    #volume_remapped = volume
+    print("Writing volume...")
+    volume_remapped.astype(DTYPE_STRING).transpose(2,1,0).tofile(gipl_file) 
 
     gipl_file.close()
     print("File written successfully!")
@@ -130,10 +133,10 @@ if __name__ == '__main__':
         print("Usage: python npy_to_gipl.py <in_file> <out_file>")
         sys.exit(1)
 
+    print("Loading input volume...")
     in_file = sys.argv[1]
+    #volume = numpy.load(in_file).astype(numpy.uint8)
     volume = numpy.load(in_file)
-    DTYPE_STRING = str(volume.dtype)
-    PIXEL_TYPE = find_name(volume.dtype) 
     out_file = sys.argv[2]
     header = write_file(volume, out_file)
 
@@ -156,4 +159,3 @@ if __name__ == '__main__':
     print("par2 : " + str(header.par2))
     print("Header size (offset): " + str(HEADER_SIZE))
     print("=====================================")
-
