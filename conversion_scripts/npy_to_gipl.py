@@ -50,7 +50,7 @@ def write_file(volume, out_file):
 
     print("Calculating header fields...")
     #Filesize field
-    DTYPE_STRING = "uint8"
+    DTYPE_STRING = "int16"
     PIXEL_TYPE = find_name(DTYPE_STRING) 
     volume_length = numpy.ma.size(volume) #This returns the total number of elements in the volume
     data_type = numpy.dtype(DTYPE_STRING)

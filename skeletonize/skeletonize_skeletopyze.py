@@ -15,11 +15,15 @@ MEMBRANE_ID = 2081
 
 def skeletonize_volume(in_file, out_file):
 
-    ax = plt.gca(projection="3d")
+    fig = plt.figure()
+    ax = fig.gca(projection="3d")
+    fig2 = plt.figure()
+    ax2 = fig2.gca(projection="3d")
     #fig = plt.figure()
     #ax = fig.add_subplot(111, projection='3d')
     print("Loading segments from input file...")
-    input_segments = numpy.load(in_file)
+    input_segments = numpy.load(in_file).astype("int8")
+    ax2.voxels(input_segments, edgecolor='k')
     params = skeletopyze.Parameters()
     skel_coords = skeletopyze.get_skeleton_graph(input_segments, params)
     for n in skel_coords.nodes():
